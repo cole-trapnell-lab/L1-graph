@@ -85,6 +85,7 @@ principal_graph <- function(X, C0, G,
 	gamma = 0.5,
 	sigma = 0.01,
 	nn = 5,
+	lp_dir = NULL,
 	verbose = T
 	) {
 
@@ -179,7 +180,8 @@ principal_graph <- function(X, C0, G,
 		   #lp.control(lpmodel,sense='max')
 
 		   #I in order to be able to visually check the model, I find it useful to write the model to a text file
-		   # write.lp(lprec,'model.lp',type='lp')
+		   if(!is.null(lp_dir))
+		   	write.lp(lprec, paste(lp_dir, 'model.lp', sep = '/'), type='lp')
 
 		   #solve the model, if this return 0 an optimal solution is found
 		   solve(lprec)
@@ -206,9 +208,9 @@ principal_graph <- function(X, C0, G,
     }
     else if(gstruct == 'span-tree'){
     	    ##########################use mst from igraph: ##########################
-		    g <- graph.adjacency(Phi, mode = 'lower', diag = T, weighted = T)
-		    g_mst <- mst(g)
-		    stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
+		    g <- igraph::graph.adjacency(Phi, mode = 'lower', diag = T, weighted = T)
+		    g_mst <- igraph::mst(g)
+		    stree <- igraph::get.adjacency(g_mst, attr = 'weight', type = 'lower')
 		    stree_ori <- stree
 
 		    #convert to matrix:
