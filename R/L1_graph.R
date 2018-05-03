@@ -66,9 +66,9 @@ get_knn <- function(X, K = 5) {
 #' @param maxiter maximum number of iteraction
 #' @param eps relative objective difference
 #' @param gstruct graph structure to learn, either L1-graph or the span-tree
-#' @param lambda regularization parameter for inverse graph embedding
-#' @param gamma regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)
-#' @param sigma bandwidth parameter
+#' @param L1.lambda regularization parameter for inverse graph embedding
+#' @param L1.gamma regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)
+#' @param L1.sigma bandwidth parameter
 #' @param nn number of nearest neighbors
 #' @param verbose emit results from iteraction
 #' @return a list of X, C, W, P, objs
@@ -81,9 +81,9 @@ get_knn <- function(X, K = 5) {
 principal_graph <- function(X, C0, G,
 	maxiter = 10, eps = 1e-5,
 	gstruct = c('l1-graph', 'span-tree'),
-	lambda = 1,
-	gamma = 0.5,
-	sigma = 0.01,
+	L1.lambda = 1,
+	L1.gamma = 0.5,
+	L1.sigma = 0.01,
 	nn = 5,
 	lp_dir = NULL,
 	verbose = T
@@ -120,16 +120,19 @@ principal_graph <- function(X, C0, G,
 
 	        # a <- as(matrix(0, nrow = 2*D, ncol = nvar), "sparseMatrix") #2D: |a| < b: -a, a
           a <- matrix(0, nrow = 2 * D, ncol = nvar)
-	        for(jj in 1:length(nn_i)){
-	            j <- nn_i[jj]
-	            key_ij <- as.character(i+j*K)
-	            if(i < j) {
-	                key_ij <- as.character(j + i*K) #index for the neighbor for the vector form of the graph
-	            }
-	            pos_ij <- rc[[key_ij]]
-	            #put this into the corresponding column
-	            a[, pos_ij] <- c(-X[, j], X[, j]) # -a < x < a; eq. 17. i-th sample's constraints. each sample has D genes
-	        }
+          if (length(nn_i) >= 1){
+            for(jj in 1:length(nn_i)){
+              j <- nn_i[jj]
+              key_ij <- as.character(i+j*K)
+              if(i < j) {
+                key_ij <- as.character(j + i*K) #index for the neighbor for the vector form of the graph
+              }
+              pos_ij <- rc[[key_ij]]
+              #put this into the corresponding column
+              a[, pos_ij] <- c(-X[, j], X[, j]) # -a < x < a; eq. 17. i-th sample's constraints. each sample has D genes
+            }
+          }
+
 	        start_i <- nw + (i-1)*D + 1
 	        end_i <- start_i + D-1 #why do we need D - 1 here? should be just D, right?
 	        #those are the columns corresponding to the episilon
@@ -151,7 +154,7 @@ principal_graph <- function(X, C0, G,
                 val[i] = Phi[row[i], col[i]]
             }
 
-            f <- matrix(c(2*val, lambda * rep(1, K*D)), ncol = 1)
+            f <- matrix(c(2*val, L1.lambda * rep(1, K*D)), ncol = 1)
 
             # MATLAB solver
             #options = optimset( 'Display', 'off','Algorithm','interior-point');
@@ -165,7 +168,7 @@ principal_graph <- function(X, C0, G,
 			#another approach:
 			# nrow a nonnegative integer value specifying the number of constaints in the linear program.
 			# ncol a nonnegative integer value specifying the number of decision variables in the linear program.
-			lprec <- make.lp(length(b), length(f))
+			lprec <- make.lp(length(b), length(f), verbose="normal")
 			set.objfn(lprec, f)
 			for(i in 1:nrow(A)) {
 				add.constraint(lprec, A[i, ], "<=", b[i, ])
@@ -223,11 +226,11 @@ principal_graph <- function(X, C0, G,
     else
         warning('graph structure %s is not supported yet.',gstruct)
 
- 	res = soft_assignment(X, C, sigma)
+ 	res = soft_assignment(X, C, L1.sigma)
  	P <- res$P
  	obj_P <- res$obj
 
-    obj <- obj_W + gamma * obj_P
+    obj <- obj_W + L1.gamma * obj_P
     objs = c(objs, obj)
     if(verbose)
         message('iter = ', iter, ' obj = ', obj)
@@ -245,7 +248,7 @@ principal_graph <- function(X, C0, G,
         }
     }
 
-    C <- generate_centers(X, W, P, gamma)
+    C <- generate_centers(X, W, P, L1.gamma)
 
 	}
 
