@@ -44,4 +44,3 @@ objs is the objective value for the function
 \description{
 function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization
 }
-

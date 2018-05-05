@@ -59,6 +59,29 @@ get_knn <- function(X, K = 5) {
 	return(list(G = G, W = W))
 }
 
+#' function to find the minimum spanning tree
+#' @param X number of rows in the returned eye matrix (D * N)
+#' @return a matrix
+#' @export
+get_mst <- function(X) {
+  N <- ncol(X)
+  norm_sq <- repmat(t(colSums(X^2)), N, 1)
+  dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+  g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
+  g_mst <- mst(g)
+  stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
+  stree_ori <- stree
+
+  #convert to matrix:
+  stree <- as.matrix(stree)
+  stree <- stree + t(stree)
+
+  stree[stree > 0] <- 1
+  W <- dist_sq * stree
+
+  return(list(G = stree, W = W))
+}
+
 #' function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization
 #' @param X the input data DxN
 #' @param C0 the initialization of centroids

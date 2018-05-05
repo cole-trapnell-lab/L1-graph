@@ -19,4 +19,3 @@ a matrix
 \description{
 function to reproduce the behavior of repmat function in matlab to replicate and tile an matrix
 }
-

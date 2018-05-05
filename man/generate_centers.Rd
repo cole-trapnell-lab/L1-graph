@@ -21,4 +21,3 @@ A matrix C for the centers for principal graph
 \description{
 function to reproduce the behavior of eye function in matlab
 }
-
