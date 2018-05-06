@@ -4,7 +4,7 @@
 \alias{get_knn}
 \title{function to find the k-nearest neighbor graph}
 \usage{
-get_knn(X, K)
+get_knn(X, K = 5)
 }
 \arguments{
 \item{X}{number of rows in the returned eye matrix (D * N)}
@@ -17,4 +17,3 @@ a matrix
 \description{
 function to find the k-nearest neighbor graph
 }
-

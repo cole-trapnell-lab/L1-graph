@@ -59,6 +59,29 @@ get_knn <- function(X, K = 5) {
 	return(list(G = G, W = W))
 }
 
+#' function to find the minimum spanning tree
+#' @param X number of rows in the returned eye matrix (D * N)
+#' @return a matrix
+#' @export
+get_mst <- function(X) {
+  N <- ncol(X)
+  norm_sq <- repmat(t(colSums(X^2)), N, 1)
+  dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+  g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
+  g_mst <- mst(g)
+  stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
+  stree_ori <- stree
+
+  #convert to matrix:
+  stree <- as.matrix(stree)
+  stree <- stree + t(stree)
+
+  stree[stree > 0] <- 1
+  W <- dist_sq * stree
+
+  return(list(G = stree, W = W))
+}
+
 #' function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization
 #' @param X the input data DxN
 #' @param C0 the initialization of centroids
@@ -70,6 +93,7 @@ get_knn <- function(X, K = 5) {
 #' @param L1.gamma regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)
 #' @param L1.sigma bandwidth parameter
 #' @param nn number of nearest neighbors
+#' @param L1.timeout a positive integer value specifying the number of seconds after which a timeout will occur. If zero, then no timeout will occur. (This is a parameter passed to lp.control function)
 #' @param verbose emit results from iteraction
 #' @return a list of X, C, W, P, objs
 #' X is the input data
@@ -85,7 +109,7 @@ principal_graph <- function(X, C0, G,
 	L1.gamma = 0.5,
 	L1.sigma = 0.01,
 	nn = 5,
-	lp_dir = NULL,
+  	L1.timeout = 1800,
 	verbose = T
 	) {
 
@@ -168,7 +192,7 @@ principal_graph <- function(X, C0, G,
 			#another approach:
 			# nrow a nonnegative integer value specifying the number of constaints in the linear program.
 			# ncol a nonnegative integer value specifying the number of decision variables in the linear program.
-			lprec <- make.lp(length(b), length(f), verbose="normal")
+			lprec <- make.lp(length(b), length(f), verbose="important")
 			set.objfn(lprec, f)
 			for(i in 1:nrow(A)) {
 				add.constraint(lprec, A[i, ], "<=", b[i, ])
@@ -187,6 +211,7 @@ principal_graph <- function(X, C0, G,
 		   	write.lp(lprec, paste(lp_dir, 'model.lp', sep = '/'), type='lp')
 
 		   #solve the model, if this return 0 an optimal solution is found
+		   lp.control(lprec, timeout = L1.timeout, presolve = "rows")
 		   solve(lprec)
 
 		   obj_W <- get.objective(lprec)

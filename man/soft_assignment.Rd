@@ -19,4 +19,3 @@ a matrix with diagonal element as 1 while other elements as zero (eye matrix)
 \description{
 function to calculate the third term in the objective function
 }
-

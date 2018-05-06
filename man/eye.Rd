@@ -17,4 +17,3 @@ a matrix with diagonal element as 1 while other elements as zero (eye matrix)
 \description{
 function to reproduce the behavior of eye function in matlab
 }
-

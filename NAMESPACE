@@ -3,6 +3,7 @@
 export(eye)
 export(generate_centers)
 export(get_knn)
+export(get_mst)
 export(principal_graph)
 export(principal_graph_large)
 export(repmat)
