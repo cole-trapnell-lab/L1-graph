@@ -108,6 +108,7 @@ principal_graph <- function(X, C0, G,
 	L1.gamma = 0.5,
 	L1.sigma = 0.01,
 	nn = 5,
+  L1.timeout = 1800,
 	verbose = T
 	) {
 
@@ -190,7 +191,7 @@ principal_graph <- function(X, C0, G,
 			#another approach:
 			# nrow a nonnegative integer value specifying the number of constaints in the linear program.
 			# ncol a nonnegative integer value specifying the number of decision variables in the linear program.
-			lprec <- make.lp(length(b), length(f), verbose="normal")
+			lprec <- make.lp(length(b), length(f), verbose="important")
 			set.objfn(lprec, f)
 			for(i in 1:nrow(A)) {
 				add.constraint(lprec, A[i, ], "<=", b[i, ])
@@ -208,6 +209,7 @@ principal_graph <- function(X, C0, G,
 		   # write.lp(lprec,'model.lp',type='lp')
 
 		   #solve the model, if this return 0 an optimal solution is found
+		   lp.control(lprec, timeout = L1.timeout, presolve = "rows")
 		   solve(lprec)
 
 		   obj_W <- get.objective(lprec)
