@@ -206,10 +206,6 @@ principal_graph <- function(X, C0, G,
 		   #set objective direction
 		   #lp.control(lpmodel,sense='max')
 
-		   #I in order to be able to visually check the model, I find it useful to write the model to a text file
-		   if(!is.null(lp_dir))
-		   	write.lp(lprec, paste(lp_dir, 'model.lp', sep = '/'), type='lp')
-
 		   #solve the model, if this return 0 an optimal solution is found
 		   lp.control(lprec, timeout = L1.timeout, presolve = "rows")
 		   solve(lprec)
