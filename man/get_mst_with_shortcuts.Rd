@@ -5,7 +5,7 @@
 \title{function to find the minimum spanning tree,
 augmented with shortcuts on vertices of odd degree}
 \usage{
-get_mst_with_shortcuts(X)
+get_mst_with_shortcuts(X, K = 5)
 }
 \arguments{
 \item{X}{number of rows in the returned eye matrix (D * N)}

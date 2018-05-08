@@ -91,6 +91,7 @@ get_mst <- function(X) {
 #' function to find the minimum spanning tree,
 #' augmented with shortcuts on vertices of odd degree
 #' @param X number of rows in the returned eye matrix (D * N)
+#' @param K of nearest neighbors for use with shortcutting
 #' @return a matrix
 #' @export
 get_mst_with_shortcuts <- function(X, K = 5) {
