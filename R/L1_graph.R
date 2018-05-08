@@ -54,9 +54,9 @@ get_knn <- function(X, K = 5) {
 
   rows <- matrix(repmat(t(knn_idx[, 1]), 1, K), N * K, 1)
   cols <- matrix(knn_idx[, 2:(K+1)], N * K, 1)
-  Gtmp <- as.matrix(sparseMatrix(rows, cols, x = 1)) #sparse(rows, cols, ones(length(rows),1), N, N);
-  G <- Gtmp + t(Gtmp)
-  G[G >= 2] <- 1
+  G = matrix(0, ncol=ncol(dist_sq), nrow=nrow(dist_sq))
+  G[cbind(rows,cols)] = 1
+  G[cbind(cols,rows)] = 1
   W <- dist_sq * G
 
 	return(list(G = G, W = W))
@@ -93,28 +93,32 @@ get_mst <- function(X) {
 #' @param X number of rows in the returned eye matrix (D * N)
 #' @return a matrix
 #' @export
-# get_mst_with_shortcuts <- function(X) {
-#   N <- ncol(X)
-#   norm_sq <- repmat(t(colSums(X^2)), N, 1)
-#   dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
-#   g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
-#   g_mst <- mst(g)
-#
-#   odd_degree_vertices = V(g_mst)[(degree(g) %% 2) == 1]
-#   odd_degree_vertex_distances = dist_sq[odd_degree_vertices, odd_degree_vertices]
-#
-#   stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
-#   stree_ori <- stree
-#
-#   #convert to matrix:
-#   stree <- as.matrix(stree)
-#   stree <- stree + t(stree)
-#
-#   stree[stree > 0] <- 1
-#   W <- dist_sq * stree
-#
-#   return(list(G = stree, W = W))
-# }
+get_mst_with_shortcuts <- function(X) {
+  N <- ncol(X)
+  norm_sq <- repmat(t(colSums(X^2)), N, 1)
+  dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+  g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
+  g_mst <- mst(g)
+
+  odd_degree_vertices = V(g_mst)[(degree(g_mst) %% 2) == 1]
+  #odd_degree_vertex_distances = dist_sq[odd_degree_vertices, odd_degree_vertices]
+
+  odd_knn = get_knn(X[,odd_degree_vertices$name], K = 3)
+
+  stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
+  stree_ori <- stree
+
+  #convert to matrix:
+  stree <- as.matrix(stree)
+
+  stree[odd_degree_vertices$name,odd_degree_vertices$name] = stree[odd_degree_vertices$name,odd_degree_vertices$name] + odd_knn$G
+  stree <- stree + t(stree)
+
+  stree[stree > 0] <- 1
+  W <- dist_sq * stree
+
+  return(list(G = stree, W = W))
+}
 
 
 #' function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization
