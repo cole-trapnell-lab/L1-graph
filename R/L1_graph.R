@@ -44,8 +44,11 @@ repmat = function(X,m,n){
 #' @export
 get_knn <- function(X, K = 5) {
 	N <- ncol(X)
-	norm_sq <- repmat(t(colSums(X^2)), N, 1)
-	dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+	#norm_sq <- repmat(t(Matrix::colSums(X^2)), N, 1)
+	#dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+	dist_sq <- as.matrix(proxy::dist(t(X)))
+	row.names(dist_sq) = colnames(dist_sq)
+
 	sort_idx <- t(apply(dist_sq, 2, function(x) sort(x, index.return = T)$ix ))
 	knn_idx <- sort_idx[, 1:(K + 1)]
 
@@ -65,9 +68,12 @@ get_knn <- function(X, K = 5) {
 #' @export
 get_mst <- function(X) {
   N <- ncol(X)
-  norm_sq <- repmat(t(colSums(X^2)), N, 1)
-  dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+  #norm_sq <- repmat(t(colSums(X^2)), N, 1)
+  #dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+  dist_sq <- as.matrix(proxy::dist(t(X)))
+  row.names(dist_sq) = colnames(dist_sq)
   g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
+
   g_mst <- mst(g)
   stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
   stree_ori <- stree
@@ -81,6 +87,35 @@ get_mst <- function(X) {
 
   return(list(G = stree, W = W))
 }
+
+#' function to find the minimum spanning tree,
+#' augmented with shortcuts on vertices of odd degree
+#' @param X number of rows in the returned eye matrix (D * N)
+#' @return a matrix
+#' @export
+# get_mst_with_shortcuts <- function(X) {
+#   N <- ncol(X)
+#   norm_sq <- repmat(t(colSums(X^2)), N, 1)
+#   dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
+#   g <- graph.adjacency(dist_sq, mode = 'lower', diag = T, weighted = T)
+#   g_mst <- mst(g)
+#
+#   odd_degree_vertices = V(g_mst)[(degree(g) %% 2) == 1]
+#   odd_degree_vertex_distances = dist_sq[odd_degree_vertices, odd_degree_vertices]
+#
+#   stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
+#   stree_ori <- stree
+#
+#   #convert to matrix:
+#   stree <- as.matrix(stree)
+#   stree <- stree + t(stree)
+#
+#   stree[stree > 0] <- 1
+#   W <- dist_sq * stree
+#
+#   return(list(G = stree, W = W))
+# }
+
 
 #' function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization
 #' @param X the input data DxN
