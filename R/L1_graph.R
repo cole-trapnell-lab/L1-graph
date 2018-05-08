@@ -93,7 +93,7 @@ get_mst <- function(X) {
 #' @param X number of rows in the returned eye matrix (D * N)
 #' @return a matrix
 #' @export
-get_mst_with_shortcuts <- function(X) {
+get_mst_with_shortcuts <- function(X, K = 5) {
   N <- ncol(X)
   norm_sq <- repmat(t(colSums(X^2)), N, 1)
   dist_sq <- norm_sq + t(norm_sq) - 2 * t(X) %*% X
@@ -103,7 +103,7 @@ get_mst_with_shortcuts <- function(X) {
   odd_degree_vertices = V(g_mst)[(degree(g_mst) %% 2) == 1]
   #odd_degree_vertex_distances = dist_sq[odd_degree_vertices, odd_degree_vertices]
 
-  odd_knn = get_knn(X[,odd_degree_vertices$name], K = 3)
+  odd_knn = get_knn(X[,odd_degree_vertices$name], K = K)
 
   stree <- get.adjacency(g_mst, attr = 'weight', type = 'lower')
   stree_ori <- stree
