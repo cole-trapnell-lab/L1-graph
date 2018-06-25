@@ -46,9 +46,10 @@ principal_graph_large <- function(X, y,
 		y_set[[PI[i]]] <- c( y_set[PI[i]][[1]], y[i])
 
 	y_center <- t(rep(0, ncenter))
-for(i in 1:length(y_center)) {
-		tbl <- table(y_set[[1]])
-		max_val <- max(tbl); max_idx <- which.max(tbl)
+	
+	for(i in 1:length(y_center)) {
+			tbl <- table(y_set[[1]])
+			max_val <- max(tbl); max_idx <- which.max(tbl)
 	}
 
 	C0 <- t(centers)

@@ -52,12 +52,12 @@ get_knn <- function(X, K = 5) {
 	sort_idx <- t(apply(dist_sq, 2, function(x) sort(x, index.return = T)$ix ))
 	knn_idx <- sort_idx[, 1:(K + 1)]
 
-  rows <- matrix(repmat(t(knn_idx[, 1]), 1, K), N * K, 1)
-  cols <- matrix(knn_idx[, 2:(K+1)], N * K, 1)
-  G = matrix(0, ncol=ncol(dist_sq), nrow=nrow(dist_sq))
-  G[cbind(rows,cols)] = 1
-  G[cbind(cols,rows)] = 1
-  W <- dist_sq * G
+	rows <- matrix(repmat(t(knn_idx[, 1]), 1, K), N * K, 1)
+	cols <- matrix(knn_idx[, 2:(K+1)], N * K, 1)
+	G = matrix(0, ncol=ncol(dist_sq), nrow=nrow(dist_sq))
+	G[cbind(rows,cols)] = 1
+	G[cbind(cols,rows)] = 1
+	W <- dist_sq * G
 
 	return(list(G = G, W = W))
 }
@@ -126,6 +126,7 @@ get_mst_with_shortcuts <- function(X, K = 5) {
 #' @param X the input data DxN
 #' @param C0 the initialization of centroids
 #' @param G graph matrix with side information where cannot-link pair is 0
+#' @param stree the graph used to constrain the l1-graph searching space (normally returned from DDRTree or SimplePPT). Default to be NULL.
 #' @param maxiter maximum number of iteraction
 #' @param eps relative objective difference
 #' @param gstruct graph structure to learn, either L1-graph or the span-tree
@@ -142,14 +143,14 @@ get_mst_with_shortcuts <- function(X, K = 5) {
 #' P is the cluster assignment matrix
 #' objs is the objective value for the function
 #' @export
-principal_graph <- function(X, C0, G,
+principal_graph <- function(X, C0, G, stree = NULL,
 	maxiter = 10, eps = 1e-5,
 	gstruct = c('l1-graph', 'span-tree'),
 	L1.lambda = 1,
 	L1.gamma = 0.5,
 	L1.sigma = 0.01,
 	nn = 5,
-  	L1.timeout = 1800,
+	L1.timeout = 1800,
 	verbose = T
 	) {
 
@@ -158,71 +159,76 @@ principal_graph <- function(X, C0, G,
 
 	# construct only once for all iterations
 	if(gstruct =='l1-graph'){
+		# low triangular sum_i sum_{j < i}
+		G_tmp <- G
+		valid_id <- which(rowSums(as.matrix(stree) > 0) == 2)
+    G_tmp[-valid_id, -valid_id] <- 0
+		G_tmp <- G + stree
 
-	    # low triangular sum_i sum_{j < i}
-      G_tmp <- G
-      G_tmp[upper.tri(G_tmp)] <- 0
-	    row_col <- which(G_tmp == 1, arr.ind = T) #lower triangle
-	    row <- row_col[, 1]; col <- row_col[, 2]
-	    nw <- length(row) #number of non-zero elements
-	    nvar <- nw + K*D #total number of variable; K*D: dimension of C
+		G_tmp[G_tmp > 0] <- 1
+		G_tmp[upper.tri(G_tmp)] <- 0
+		row_col <- which(G_tmp == 1, arr.ind = T) #lower triangle
+		row <- row_col[, 1]; col <- row_col[, 2]
+		nw <- length(row) #number of non-zero elements
+		nvar <- nw + K*D #total number of variable; K*D: dimension of C
 
-	    rc <- new.env(hash=T, parent=emptyenv())
-	    # rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
-	    for(i in 1:nw) {
-	        key_ij <- as.character(row[i] + col[i]*K) #index for the W_ij for the vector form of the weight matrix
-			    rc[[key_ij]] <- i
-	    }
+		rc <- new.env(hash=T, parent=emptyenv())
+		# rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
+		for(i in 1:nw) {
+		  key_ij <- as.character(row[i] + (col[i] - 1)*K) #index for the W_ij for the vector form of the weight matrix
+		  message('key_ij is ', key_ij)
+		  rc[[key_ij]] <- i
+		}
 
-	    # construct A and b
-		  A <- matrix(nrow = 2 * D * K, ncol = nvar) #sparseMatrix(2 * D * K, nvar) # (i, j, x = x))
-	    b <- matrix(nrow = 2 * D * K, ncol = 1) #sparseMatrix(2 * D * K, 1) #dimension is (2D * K) X 1
+		# construct A and b
+		A <- matrix(nrow = 2 * D * K, ncol = nvar) #sparseMatrix(2 * D * K, nvar) # (i, j, x = x))
+		b <- matrix(nrow = 2 * D * K, ncol = 1) #sparseMatrix(2 * D * K, 1) #dimension is (2D * K) X 1
 
-	    for(i in 1:K){
-	      # print(i)
-	        nn_i <- which(G[,i]==1)
+		for(i in 1:K){
+		  # print(i)
+		    nn_i <- which(G[,i]==1)
 
-	        # a <- as(matrix(0, nrow = 2*D, ncol = nvar), "sparseMatrix") #2D: |a| < b: -a, a
-          a <- matrix(0, nrow = 2 * D, ncol = nvar)
-          if (length(nn_i) >= 1){
-            for(jj in 1:length(nn_i)){
-              j <- nn_i[jj]
-              key_ij <- as.character(i+j*K)
-              if(i < j) {
-                key_ij <- as.character(j + i*K) #index for the neighbor for the vector form of the graph
-              }
-              pos_ij <- rc[[key_ij]]
-              #put this into the corresponding column
-              a[, pos_ij] <- c(-X[, j], X[, j]) # -a < x < a; eq. 17. i-th sample's constraints. each sample has D genes
-            }
-          }
+		    # a <- as(matrix(0, nrow = 2*D, ncol = nvar), "sparseMatrix") #2D: |a| < b: -a, a
+		  a <- matrix(0, nrow = 2 * D, ncol = nvar)
+		  if (length(nn_i) >= 1){
+		    for(jj in 1:length(nn_i)){
+		      j <- nn_i[jj]
+		      key_ij <- as.character(i+j*K)
+		      if(i < j) {
+		        key_ij <- as.character(j + i*K) #index for the neighbor for the vector form of the graph
+		      }
+		      pos_ij <- rc[[key_ij]]
+		      #put this into the corresponding column
+		      a[, pos_ij] <- c(-X[, j], X[, j]) # -a < x < a; eq. 17. i-th sample's constraints. each sample has D genes
+		    }
+		  }
 
-	        start_i <- nw + (i-1)*D + 1
-	        end_i <- start_i + D-1 #why do we need D - 1 here? should be just D, right?
-	        #those are the columns corresponding to the episilon
-	        a[, start_i:end_i] = -rbind(eye(D,D), eye(D,D)) # |a| < b =>  a - b <= 0 & -b -a >= 0; eye: comes from the b (I matrix)
-	        A[((i - 1) * 2 * D + 1):((i) * 2 * D), ] <- a
-	        b[((i - 1) * 2 * D + 1):((i) * 2 * D), ] <- c(-X[, i], X[, i])
-	    }
+		    start_i <- nw + (i-1)*D + 1
+		    end_i <- start_i + D-1 #why do we need D - 1 here? should be just D, right?
+		    #those are the columns corresponding to the episilon
+		    a[, start_i:end_i] = -rbind(eye(D,D), eye(D,D)) # |a| < b =>  a - b <= 0 & -b -a >= 0; eye: comes from the b (I matrix)
+		    A[((i - 1) * 2 * D + 1):((i) * 2 * D), ] <- a
+		    b[((i - 1) * 2 * D + 1):((i) * 2 * D), ] <- c(-X[, i], X[, i])
+		}
 	}
 
 	objs <- c()
 	lp_vars <- c()
+
 	for(iter in 1:maxiter){
+	    norm_sq <- repmat(t(colSums(C^2)), K, 1) #this part calculates the cost matrix Phi
+	    Phi <- norm_sq + t(norm_sq) - 2 * t(C) %*% C
+	    if(gstruct == 'l1-graph'){
+	        val <- matrix(0, nrow = nw, ncol = 1)
+	        for(i in 1:nw) {
+	            val[i] = Phi[row[i], col[i]]
+	        }
 
-    norm_sq <- repmat(t(colSums(C^2)), K, 1) #this part calculates the cost matrix Phi
-    Phi <- norm_sq + t(norm_sq) - 2 * t(C) %*% C
-    if(gstruct == 'l1-graph'){
-            val <- matrix(0, nrow = nw, ncol = 1)
-            for(i in 1:nw) {
-                val[i] = Phi[row[i], col[i]]
-            }
+	        f <- matrix(c(2*val, L1.lambda * rep(1, K*D)), ncol = 1)
 
-            f <- matrix(c(2*val, L1.lambda * rep(1, K*D)), ncol = 1)
-
-            # MATLAB solver
-            #options = optimset( 'Display', 'off','Algorithm','interior-point');
-            # [w_eta, obj_W] = linprog(f, A, b, [], [], [zeros(nw, 1); -Inf*matrix(K*D,nrow = 1)], [], lp_vars, options);
+	        # MATLAB solver
+	        #options = optimset( 'Display', 'off','Algorithm','interior-point');
+	        # [w_eta, obj_W] = linprog(f, A, b, [], [], [zeros(nw, 1); -Inf*matrix(K*D,nrow = 1)], [], lp_vars, options);
 
 			# lpSolve package
 			# prod.sol <- lp("min", f, A, constr.dir, b, compute.sens = TRUE)
@@ -237,21 +243,37 @@ principal_graph <- function(X, C0, G,
 			for(i in 1:nrow(A)) {
 				add.constraint(lprec, A[i, ], "<=", b[i, ])
 			}
-			# for(j in 1:nrow()) {
-			# 	set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
-			# }
-			set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D))) #				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
 
+			if(!is.null(stree)) {
+			  stree[upper.tri(stree)] <- 0
+				row_col <- which(stree > 0, arr.ind = T) #lower triangle
+				stree_row <- row_col[, 1]; stree_col <- row_col[, 2]
 
-		   #set objective direction
-		   #lp.control(lpmodel,sense='max')
+				#rc <- new.env(hash=T, parent=emptyenv())
+				# rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
+				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D))) #				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
+				N <- ncol(stree)
+				for(i in 1:length(stree_row)) {
+				    message('current row is ', i)
+				    stree_key_ij <- as.character(stree_row[i] + (stree_col[i] - 1)*N) #index for the W_ij for the vector form of the weight matrix
+				    set.bounds(lprec, lower = 1, upper = 1, columns = rc[[stree_key_ij]])
+				}
+			} else {
+				# for(j in 1:nrow()) {
+				# 	set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
+				# }
+				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D))) #				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
+			}
 
-		   #solve the model, if this return 0 an optimal solution is found
-		   lp.control(lprec, timeout = L1.timeout, presolve = "rows")
-		   solve(lprec)
+			#set objective direction
+			#lp.control(lpmodel,sense='max')
 
-		   obj_W <- get.objective(lprec)
-		   w_eta <- get.variables(lprec)
+			#solve the model, if this return 0 an optimal solution is found
+			lp.control(lprec, timeout = L1.timeout, presolve = "rows")
+			solve(lprec)
+
+			obj_W <- get.objective(lprec)
+			w_eta <- get.variables(lprec)
 
 			# %                                                           lb(w, )                      ub
 			# %             % Mosek solver
@@ -262,30 +284,29 @@ principal_graph <- function(X, C0, G,
 			# %             w_eta = res.sol.bas.xx;
 			# %             obj_W = f'*w_eta;
 
-            # recover results
-            w <- w_eta[1:nw]
-            W_tril <- as.matrix(sparseMatrix(row, col, x = w, dims = c(K, K))) #W_tril(row(i), row(i)) = w(i) and K should be dimension of the matrix
-            W <- W_tril + t(W_tril)
+			# recover results
+			w <- w_eta[1:nw]
+			W_tril <- as.matrix(sparseMatrix(row, col, x = w, index1 = TRUE, dims = c(K, K))) #W_tril(row(i), row(i)) = w(i) and K should be dimension of the matrix
+			W <- W_tril + t(W_tril)
 
-            # warm start #it seems that the matlab version ignored warm start with the interior-point method
-            lp_vars <- w_eta
-    }
-    else if(gstruct == 'span-tree'){
-    	    ##########################use mst from igraph: ##########################
+			# warm start #it seems that the matlab version ignored warm start with the interior-point method
+			lp_vars <- w_eta
+    	} else if(gstruct == 'span-tree'){
+    	  ##########################use mst from igraph: ##########################
 		    g <- igraph::graph.adjacency(Phi, mode = 'lower', diag = T, weighted = T)
 		    g_mst <- igraph::mst(g)
 		    stree <- igraph::get.adjacency(g_mst, attr = 'weight', type = 'lower')
 		    stree_ori <- stree
 
 		    #convert to matrix:
-		    stree <- as.matrix(stree)
-		    stree <- stree + t(stree)
+		    stree <- stree + Matrix::t(stree)
 
-            W <- stree != 0
-            obj_W <- sum(sum(stree))
+        W <- stree != 0
+        obj_W <- sum(sum(stree))
     }
-    else
+    else {
         warning('graph structure %s is not supported yet.',gstruct)
+    }
 
  	res = soft_assignment(X, C, L1.sigma)
  	P <- res$P
@@ -313,7 +334,7 @@ principal_graph <- function(X, C0, G,
 
 	}
 
-    return(list(X = X, C = C, W = W, P = P, objs = objs))
+  return(list(X = X, C = C, W = W, P = P, objs = objs))
 }
 
 #' function to reproduce the behavior of eye function in matlab

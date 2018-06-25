@@ -9,6 +9,8 @@ get_mst_with_shortcuts(X, K = 5)
 }
 \arguments{
 \item{X}{number of rows in the returned eye matrix (D * N)}
+
+\item{K}{of nearest neighbors for use with shortcutting}
 }
 \value{
 a matrix

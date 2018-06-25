@@ -4,7 +4,7 @@
 \alias{principal_graph}
 \title{function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization}
 \usage{
-principal_graph(X, C0, G, maxiter = 10, eps = 1e-05,
+principal_graph(X, C0, G, stree = NULL, maxiter = 10, eps = 1e-05,
   gstruct = c("l1-graph", "span-tree"), L1.lambda = 1, L1.gamma = 0.5,
   L1.sigma = 0.01, nn = 5, L1.timeout = 1800, verbose = T)
 }
@@ -14,6 +14,8 @@ principal_graph(X, C0, G, maxiter = 10, eps = 1e-05,
 \item{C0}{the initialization of centroids}
 
 \item{G}{graph matrix with side information where cannot-link pair is 0}
+
+\item{stree}{the graph used to constrain the l1-graph searching space (normally returned from DDRTree or SimplePPT). Default to be NULL.}
 
 \item{maxiter}{maximum number of iteraction}
 
