@@ -5,8 +5,8 @@
 \title{function to automatically learn the structure of data by either using L1-graph or the spanning-tree formulization}
 \usage{
 principal_graph_large(X, y, maxiter = 10, eps = 1e-05,
-  gstruct = c("l1-graph", "span-tree"), lambda = 1, gamma = 0.5,
-  sigma = 0.01, nn = 5, ncenter = NULL, verbose = T)
+  gstruct = c("l1-graph", "span-tree"), L1.lambda = 1, L1.gamma = 0.5,
+  L1.sigma = 0.01, nn = 5, ncenter = NULL, verbose = T)
 }
 \arguments{
 \item{X}{the input data DxN}
@@ -19,11 +19,11 @@ principal_graph_large(X, y, maxiter = 10, eps = 1e-05,
 
 \item{gstruct}{graph structure to learn, either L1-graph or the span-tree}
 
-\item{lambda}{regularization parameter for inverse graph embedding}
+\item{L1.lambda}{regularization parameter for inverse graph embedding}
 
-\item{gamma}{regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)}
+\item{L1.gamma}{regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)}
 
-\item{sigma}{bandwidth parameter}
+\item{L1.sigma}{bandwidth parameter}
 
 \item{nn}{number of nearest neighbors}
 

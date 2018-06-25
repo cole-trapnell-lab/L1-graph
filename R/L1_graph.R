@@ -176,7 +176,6 @@ principal_graph <- function(X, C0, G, stree = NULL,
 		# rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
 		for(i in 1:nw) {
 		  key_ij <- as.character(row[i] + (col[i] - 1)*K) #index for the W_ij for the vector form of the weight matrix
-		  message('key_ij is ', key_ij)
 		  rc[[key_ij]] <- i
 		}
 
@@ -217,7 +216,7 @@ principal_graph <- function(X, C0, G, stree = NULL,
 
 	for(iter in 1:maxiter){
 	    norm_sq <- repmat(t(colSums(C^2)), K, 1) #this part calculates the cost matrix Phi
-	    Phi <- norm_sq + t(norm_sq) - 2 * t(C) %*% C
+	    Phi <- norm_sq + t(norm_sq) - 2 * t(C) %*% C #this matrix is N * N
 	    if(gstruct == 'l1-graph'){
 	        val <- matrix(0, nrow = nw, ncol = 1)
 	        for(i in 1:nw) {
@@ -302,6 +301,7 @@ principal_graph <- function(X, C0, G, stree = NULL,
 		    stree <- stree + Matrix::t(stree)
 
         W <- stree != 0
+        W <- as(W, 'dgCMatrix')
         obj_W <- sum(sum(stree))
     }
     else {
@@ -349,7 +349,7 @@ generate_centers <- function(X, W, P, param.gamma){
 	D <- nrow(X); N <- nrow(X)
 	K <- ncol(W)
 	# prevent singular
-	Q <- 2 *( diag(colSums(W)) - W ) + param.gamma * diag(colSums(P)) # + 1e-10.*eye(K,K);
+	Q <- 2 *( diag(Matrix::colSums(W)) - W ) + param.gamma * diag(colSums(P)) # + 1e-10.*eye(K,K);
 	B <-  param.gamma * X %*% P;
 	C <- B %*% solve(Q)   #equation 22
 

@@ -6,9 +6,9 @@
 #' @param maxiter maximum number of iteraction
 #' @param eps relative objective difference
 #' @param gstruct graph structure to learn, either L1-graph or the span-tree
-#' @param lambda regularization parameter for inverse graph embedding
-#' @param gamma regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)
-#' @param sigma bandwidth parameter
+#' @param L1.lambda regularization parameter for inverse graph embedding
+#' @param L1.gamma regularization parameter for k-means (the prefix of 'param' is used to avoid name collision with gamma)
+#' @param L1.sigma bandwidth parameter
 #' @param nn number of nearest neighbors
 #' @param verbose emit results from iteraction
 #' @return a list of X, C, W, P, objs
@@ -21,9 +21,9 @@
 principal_graph_large <- function(X, y,
 	maxiter = 10, eps = 1e-5,
 	gstruct = c('l1-graph', 'span-tree'),
-	lambda = 1,
-	gamma = 0.5,
-	sigma = 0.01,
+	L1.lambda = 1,
+	L1.gamma = 0.5,
+	L1.sigma = 0.01,
 	nn = 5,
 	ncenter = NULL,
 	verbose = T) { # [y_center, C, W, P, objs] =
@@ -46,7 +46,7 @@ principal_graph_large <- function(X, y,
 		y_set[[PI[i]]] <- c( y_set[PI[i]][[1]], y[i])
 
 	y_center <- t(rep(0, ncenter))
-	
+
 	for(i in 1:length(y_center)) {
 			tbl <- table(y_set[[1]])
 			max_val <- max(tbl); max_idx <- which.max(tbl)
@@ -69,9 +69,9 @@ principal_graph_large <- function(X, y,
 	res <- principal_graph(X, C0, G_list$G,
 	    	maxiter = maxiter, eps = eps,
 	    	gstruct = gstruct,
-	    	lambda = lambda,
-	    	gamma = gamma,
-	    	sigma = sigma,
+	    	L1.lambda = L1.lambda,
+	    	L1.gamma = L1.gamma,
+	    	L1.sigma = L1.sigma,
 	    	nn = nn,
 	    	verbose = verbose)
 
