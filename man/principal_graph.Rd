@@ -38,9 +38,13 @@ principal_graph(X, C0, G, stree = NULL, maxiter = 10, eps = 1e-05,
 \value{
 a list of X, C, W, P, objs
 X is the input data
+
 C is the centers for principal graph
+
 W is the pricipal graph matrix
+
 P is the cluster assignment matrix
+
 objs is the objective value for the function
 }
 \description{

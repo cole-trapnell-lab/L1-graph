@@ -138,9 +138,13 @@ get_mst_with_shortcuts <- function(X, K = 5) {
 #' @param verbose emit results from iteraction
 #' @return a list of X, C, W, P, objs
 #' X is the input data
+#'
 #' C is the centers for principal graph
+#'
 #' W is the pricipal graph matrix
+#'
 #' P is the cluster assignment matrix
+#'
 #' objs is the objective value for the function
 #' @export
 principal_graph <- function(X, C0, G, stree = NULL,
@@ -185,9 +189,9 @@ principal_graph <- function(X, C0, G, stree = NULL,
 
 		for(i in 1:K){
 		  # print(i)
-		    nn_i <- which(G[,i]==1)
+		  nn_i <- which(G[,i]==1)
 
-		    # a <- as(matrix(0, nrow = 2*D, ncol = nvar), "sparseMatrix") #2D: |a| < b: -a, a
+		  # a <- as(matrix(0, nrow = 2*D, ncol = nvar), "sparseMatrix") #2D: |a| < b: -a, a
 		  a <- matrix(0, nrow = 2 * D, ncol = nvar)
 		  if (length(nn_i) >= 1){
 		    for(jj in 1:length(nn_i)){
@@ -218,45 +222,45 @@ principal_graph <- function(X, C0, G, stree = NULL,
 	    norm_sq <- repmat(t(colSums(C^2)), K, 1) #this part calculates the cost matrix Phi
 	    Phi <- norm_sq + t(norm_sq) - 2 * t(C) %*% C #this matrix is N * N
 	    if(gstruct == 'l1-graph'){
-	        val <- matrix(0, nrow = nw, ncol = 1)
-	        for(i in 1:nw) {
-	            val[i] = Phi[row[i], col[i]]
+	      val <- matrix(0, nrow = nw, ncol = 1)
+	      for(i in 1:nw) {
+	        val[i] = Phi[row[i], col[i]]
+	      }
+
+	      f <- matrix(c(2*val, L1.lambda * rep(1, K*D)), ncol = 1)
+
+	      # MATLAB solver
+	      #options = optimset( 'Display', 'off','Algorithm','interior-point');
+	      # [w_eta, obj_W] = linprog(f, A, b, [], [], [zeros(nw, 1); -Inf*matrix(K*D,nrow = 1)], [], lp_vars, options);
+
+	      # lpSolve package
+	      # prod.sol <- lp("min", f, A, constr.dir, b, compute.sens = TRUE)
+	      # obj_W <- prod.sol$obj.val #objective function value
+	      # w_eta <- prod.sol$solution
+
+	      #another approach:
+	      # nrow a nonnegative integer value specifying the number of constaints in the linear program.
+	      # ncol a nonnegative integer value specifying the number of decision variables in the linear program.
+	      lprec <- make.lp(length(b), length(f), verbose="important")
+	      set.objfn(lprec, f)
+	      for(i in 1:nrow(A)) {
+	        add.constraint(lprec, A[i, ], "<=", b[i, ])
+	      }
+
+	      if(!is.null(stree)) {
+	        stree[upper.tri(stree)] <- 0
+	        row_col <- which(stree > 0, arr.ind = T) #lower triangle
+	        stree_row <- row_col[, 1]; stree_col <- row_col[, 2]
+
+	        #rc <- new.env(hash=T, parent=emptyenv())
+	        # rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
+	        set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D))) #				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
+	        N <- ncol(stree)
+	        for(i in 1:length(stree_row)) {
+	          # message('current row is ', i)
+	          stree_key_ij <- as.character(stree_row[i] + (stree_col[i] - 1)*N) #index for the W_ij for the vector form of the weight matrix
+	          set.bounds(lprec, lower = 1, upper = 1, columns = rc[[stree_key_ij]])
 	        }
-
-	        f <- matrix(c(2*val, L1.lambda * rep(1, K*D)), ncol = 1)
-
-	        # MATLAB solver
-	        #options = optimset( 'Display', 'off','Algorithm','interior-point');
-	        # [w_eta, obj_W] = linprog(f, A, b, [], [], [zeros(nw, 1); -Inf*matrix(K*D,nrow = 1)], [], lp_vars, options);
-
-			# lpSolve package
-			# prod.sol <- lp("min", f, A, constr.dir, b, compute.sens = TRUE)
-			# obj_W <- prod.sol$obj.val #objective function value
-			# w_eta <- prod.sol$solution
-
-			#another approach:
-			# nrow a nonnegative integer value specifying the number of constaints in the linear program.
-			# ncol a nonnegative integer value specifying the number of decision variables in the linear program.
-			lprec <- make.lp(length(b), length(f), verbose="important")
-			set.objfn(lprec, f)
-			for(i in 1:nrow(A)) {
-				add.constraint(lprec, A[i, ], "<=", b[i, ])
-			}
-
-			if(!is.null(stree)) {
-			  stree[upper.tri(stree)] <- 0
-				row_col <- which(stree > 0, arr.ind = T) #lower triangle
-				stree_row <- row_col[, 1]; stree_col <- row_col[, 2]
-
-				#rc <- new.env(hash=T, parent=emptyenv())
-				# rc = java.util.HashMap; %hash-map: change the low triange into a vector and find the matrix index# change to a vector for linear programing
-				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D))) #				set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
-				N <- ncol(stree)
-				for(i in 1:length(stree_row)) {
-				    message('current row is ', i)
-				    stree_key_ij <- as.character(stree_row[i] + (stree_col[i] - 1)*N) #index for the W_ij for the vector form of the weight matrix
-				    set.bounds(lprec, lower = 1, upper = 1, columns = rc[[stree_key_ij]])
-				}
 			} else {
 				# for(j in 1:nrow()) {
 				# 	set.bounds(lprec, lower = c(rep(0, nw), -Inf*rep(1, K*D)), columns = 1:length(b))
