@@ -141,6 +141,7 @@ get_mst_with_shortcuts <- function(X, K = 5) {
 #' W is the pricipal graph matrix
 #' P is the cluster assignment matrix
 #' objs is the objective value for the function
+#' @import lpSolveAPI
 #' @export
 principal_graph <- function(X, C0, G,
 	maxiter = 10, eps = 1e-5,
