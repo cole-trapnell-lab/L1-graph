@@ -3,7 +3,7 @@ Type: Package
 Title: Finding Principal Graphs via L1 Optimization
 Version: 0.1.1
 Author: Xiaojie Qiu, Qi Mao, and Cole Trapnell
-Maintainer: xqiu@uw.edu
+Maintainer: Xiaojie Qiu <xqiu@uw.edu>
 Description: A package for finding principal graphs via L1 optimization
 License: MIT
 LazyData: TRUE
