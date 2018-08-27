@@ -34,7 +34,7 @@ repmat = function(X,m,n){
   ##R equivalent of repmat (matlab)
   mx = dim(X)[1]
   nx = dim(X)[2]
-  matrix(t(matrix(X,mx,nx*n)),mx*m,nx*n,byrow=T)
+  matrix(matrix(X,mx,nx*n),mx*m,nx*n,byrow=F)
 }
 
 #' function to find the k-nearest neighbor graph
@@ -165,9 +165,12 @@ principal_graph <- function(X, C0, G, stree = NULL,
 	if(gstruct =='l1-graph'){
 		# low triangular sum_i sum_{j < i}
 		G_tmp <- G
-		valid_id <- which(rowSums(as.matrix(stree) > 0) == 2)
-    G_tmp[-valid_id, -valid_id] <- 0
-		G_tmp <- G + stree
+
+		if(!is.null(stree)) {
+  		valid_id <- which(rowSums(as.matrix(stree) > 0) == 2)
+      G_tmp[-valid_id, -valid_id] <- 0
+  		G_tmp <- G + stree
+		}
 
 		G_tmp[G_tmp > 0] <- 1
 		G_tmp[upper.tri(G_tmp)] <- 0
