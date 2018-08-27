@@ -167,9 +167,9 @@ principal_graph <- function(X, C0, G, stree = NULL,
 		G_tmp <- G
 
 		if(!is.null(stree)) {
-  		valid_id <- which(rowSums(as.matrix(stree) > 0) == 2)
-      G_tmp[-valid_id, -valid_id] <- 0
-  		G_tmp <- G + stree
+	  		valid_id <- which(rowSums(as.matrix(stree) > 0) == 2)
+	      	G_tmp[-valid_id, -valid_id] <- 0
+	  		G_tmp <- G + stree
 		}
 
 		G_tmp[G_tmp > 0] <- 1
